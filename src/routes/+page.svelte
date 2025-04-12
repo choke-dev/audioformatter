@@ -30,6 +30,7 @@
     const tableData = writable<TableRow[]>([]);
     let copyButtonText = 'Copy';
     let copyTimeout: number | undefined;
+    const codeBlockFormatting = writable<boolean>(false);
 
     // Derived store for selected rows count
     const selectedCount = derived(tableData, $data => 
@@ -82,6 +83,17 @@
         });
 
         return table;
+    });
+
+    // Derived store for formatted ASCII table (with optional Discord code block formatting)
+    const formattedAsciiTable = derived([asciiTable, codeBlockFormatting], ([$asciiTable, $codeBlockFormatting]) => {
+        if (!$asciiTable) return '';
+        
+        if ($codeBlockFormatting) {
+            return '```\n' + $asciiTable + '```';
+        }
+        
+        return $asciiTable;
     });
 
     // Function to generate a unique internal ID
@@ -157,7 +169,7 @@
         if (!isBrowser) return;
         
         try {
-            await navigator.clipboard.writeText($asciiTable);
+            await navigator.clipboard.writeText($formattedAsciiTable);
             copyButtonText = 'Copied!';
             
             // Reset button text after 2 seconds
@@ -359,10 +371,17 @@
             <div class="card-body">
                 <div class="flex justify-between items-center mb-2">
                     <h2 class="card-title">ASCII/Markdown Table Preview</h2>
-                    <button 
-                        class="btn btn-sm btn-primary gap-2" 
-                        on:click={copyToClipboard}
-                        disabled={!$asciiTable}
+                    <div class="flex gap-2 items-center">
+                        <div class="form-control">
+                            <label class="label cursor-pointer gap-2">
+                                <span class="label-text text-xs">Encode as Code Block</span>
+                                <input type="checkbox" class="toggle toggle-primary toggle-sm" bind:checked={$codeBlockFormatting} />
+                            </label>
+                        </div>
+                        <button
+                            class="btn btn-sm btn-primary gap-2"
+                            on:click={copyToClipboard}
+                            disabled={!$asciiTable}
                     >
                         <svg 
                             xmlns="http://www.w3.org/2000/svg" 
@@ -379,10 +398,11 @@
                             <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
                         </svg>
                         {copyButtonText}
-                    </button>
+                        </button>
+                    </div>
                 </div>
                 <div class="font-mono whitespace-pre overflow-x-auto bg-base-200 p-4 rounded-lg max-h-[calc(100vh-180px)] text-sm">
-                    {$asciiTable}
+                    {$formattedAsciiTable}
                 </div>
             </div>
         </div>
